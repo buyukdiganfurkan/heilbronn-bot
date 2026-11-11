@@ -15,7 +15,7 @@ def _token(token_env):
     tok = os.environ.get(token_env) or os.environ.get("TELEGRAM_TOKEN")
     if not tok:
         raise SystemExit("TELEGRAM_TOKEN secret eksik")
-    return tok
+    return tok.strip()
 
 
 def _chat_id(token, token_env="TELEGRAM_TOKEN"):
@@ -34,8 +34,12 @@ def _chat_id(token, token_env="TELEGRAM_TOKEN"):
             return msg["chat"]["id"]
     if saved.get(token_env):
         return saved[token_env]
-    me = requests.get(f"{base}/getMe", timeout=30).json().get("result", {})
-    raise SystemExit(f"Chat ID bulunamadı: Telegram'da @{me.get('username', '?')} botuna /start yaz, "
+    me = requests.get(f"{base}/getMe", timeout=30).json()
+    if not me.get("ok"):
+        raise SystemExit(f"TELEGRAM_TOKEN geçersiz (Telegram yanıtı: {me.get('description')}, "
+                         f"token uzunluğu {len(token)}, boşluk var mı: {token != token.strip()}). "
+                         "BotFather'daki tokenı tekrar kopyalayıp secret'ı güncelle.")
+    raise SystemExit(f"Chat ID bulunamadı: Telegram'da @{me['result'].get('username')} botuna /start yaz, "
                      "sonra tekrar çalıştır.")
 
 
