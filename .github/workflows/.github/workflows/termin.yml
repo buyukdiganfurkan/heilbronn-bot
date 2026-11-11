@@ -1,0 +1,45 @@
+name: Auslaenderbehoerde erken randevu
+
+on:
+  schedule:
+    - cron: "*/10 5-20 * * *"
+  workflow_dispatch:
+    inputs:
+      debug:
+        description: "Sayfa metni ve ekran goruntusunu Telegram'a gonder"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: state-commit
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt && python -m playwright install --with-deps chromium
+      - run: python termin.py
+        env:
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          TERMIN_TELEGRAM_TOKEN: ${{ secrets.TERMIN_TELEGRAM_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          SERVICE_TEXT: ${{ vars.SERVICE_TEXT }}
+          CURRENT_APPOINTMENT: ${{ vars.CURRENT_APPOINTMENT }}
+          DEBUG: ${{ inputs.debug }}
+      - name: Durumu kaydet
+        if: always()
+        run: |
+          git config user.name "bot"
+          git config user.email "bot@users.noreply.github.com"
+          git add state
+          git diff --cached --quiet || (git commit -m "termin state" && git pull --rebase && git push)
