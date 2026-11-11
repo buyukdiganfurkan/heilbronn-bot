@@ -38,5 +38,15 @@ jobs:
         run: |
           git config user.name "bot"
           git config user.email "bot@users.noreply.github.com"
-          git add state
-          git diff --cached --quiet || (git commit -m "w27 state" && git pull --rebase && git push)
+          rm -rf /tmp/st && cp -r state /tmp/st
+          for i in 1 2 3 4; do
+            git fetch -q origin main && git reset -q --hard origin/main
+            mkdir -p state
+            cp /tmp/st/w27.json state/ 2>/dev/null || true
+            cp /tmp/st/chat.json state/ 2>/dev/null || true
+            git add state
+            if git diff --cached --quiet; then break; fi
+            git commit -q -m "w27 state"
+            if git push -q; then break; fi
+            sleep $((i * 3))
+          done
