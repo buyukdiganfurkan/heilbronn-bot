@@ -27,13 +27,12 @@ jobs:
         with:
           python-version: "3.12"
           cache: pip
-      - run: pip install -r requirements.txt && python -m playwright install --with-deps chromium
+      - run: pip install requests
       - run: python termin.py
         env:
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           TERMIN_TELEGRAM_TOKEN: ${{ secrets.TERMIN_TELEGRAM_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-          SERVICE_TEXT: ${{ vars.SERVICE_TEXT }}
           CURRENT_APPOINTMENT: ${{ vars.CURRENT_APPOINTMENT }}
           DEBUG: ${{ inputs.debug }}
       - name: Durumu kaydet

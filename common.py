@@ -18,22 +18,30 @@ def _token(token_env):
     return tok
 
 
-def _chat_id(token):
+def _chat_id(token, token_env="TELEGRAM_TOKEN"):
     cid = os.environ.get("TELEGRAM_CHAT_ID")
     if cid:
         return cid
-    # Chat ID girilmediyse: bota en son mesaj atan sohbeti bul
-    r = requests.get(f"https://api.telegram.org/bot{token}/getUpdates", timeout=30).json()
+    base = f"https://api.telegram.org/bot{token}"
+    saved = load_state("chat")
+    # Bota en son mesaj atan sohbeti bul (Telegram bunu sadece 24 saat tutar)
+    r = requests.get(f"{base}/getUpdates", timeout=30).json()
     for upd in reversed(r.get("result", [])):
         msg = upd.get("message") or upd.get("channel_post")
         if msg:
+            saved[token_env] = msg["chat"]["id"]
+            save_state("chat", saved)
             return msg["chat"]["id"]
-    raise SystemExit("Chat ID bulunamadı: Telegram'da bota /start yaz, sonra tekrar çalıştır.")
+    if saved.get(token_env):
+        return saved[token_env]
+    me = requests.get(f"{base}/getMe", timeout=30).json().get("result", {})
+    raise SystemExit(f"Chat ID bulunamadı: Telegram'da @{me.get('username', '?')} botuna /start yaz, "
+                     "sonra tekrar çalıştır.")
 
 
 def send(text, photo=None, token_env="TELEGRAM_TOKEN"):
     token = _token(token_env)
-    chat = _chat_id(token)
+    chat = _chat_id(token, token_env)
     base = f"https://api.telegram.org/bot{token}"
     if photo and Path(photo).exists():
         with open(photo, "rb") as f:
